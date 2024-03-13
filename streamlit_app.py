@@ -4,7 +4,10 @@ import uuid
 from chat_llm.chat_handler import ChatHandler
 from faceRecModule.faceFeature import FaceFeatures
 import os
-api_key = st.secrets["OPENAI_API_KEY"]
+from dotenv import load_dotenv
+
+load_dotenv()
+api_key = os.getenv("OPENAI_API_KEY")
 
 def file_upload(filepath:str):
     try:

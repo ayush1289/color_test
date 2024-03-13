@@ -5,3 +5,4 @@ python-multipart==0.0.9
 streamlit==1.31.1
 openai==1.13.3
 dlib==19.24.2
+python-dotenv==1.0.1
