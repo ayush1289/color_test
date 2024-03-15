@@ -1,5 +1,6 @@
 import re
 from openai import OpenAI
+from faceRecModule.faceFeature import FaceFeatures
 
 
 class ChatHandler:
@@ -119,12 +120,49 @@ class ChatHandler:
         return response.choices[0].message.content
 
 
+def hexcode_from_text(text):
+    """
+    Extracts hexcodes from a given text.
+
+    Parameters:
+        text (str): A string containing hexcodes.
+
+    Returns:
+        list: A list of hexcodes corresponding to the colors mentioned in the text.
+    """
+    hexcode_color_pairs = re.findall(r"#([a-fA-F\d]+)\s*\(([^)]+)\)", text)
+    colors = {pair[0]: pair[1] for pair in hexcode_color_pairs}
+    return hexcode_color_pairs
+
+
+def hexcode_remover_from_text(text):
+    """
+    Removes hexcodes from a given text.
+
+    Parameters:
+        text (str): A string containing hexcodes.
+
+    Returns:
+        str: A string with hexcodes removed.
+    """
+    return re.sub(r"#([a-fA-F\d]+)\s*\(([^)]+)\)", "", text)
+
+
+
+
 if __name__ == "__main__":
-    # Example usage
+
+    from dotenv import load_dotenv
+    import os
+
+    load_dotenv("../setup/.env")
     chat_handler = ChatHandler(
-        api_key="####",
+        api_key=os.getenv("OPENAI_API_KEY"),
         hexcodes=("#dfb8aa", "#c39e8e", "#d09d82", "#e4c1ad", "#c34a5b"),
     )
-    print(chat_handler.get_good_palette())
-    print(chat_handler.get_bad_palette())
-    print(chat_handler.get_blush())
+    response = chat_handler.get_good_palette()
+    print(response)
+    response_hexcode = hexcode_from_text(response)
+    final_response = hexcode_remover_from_text(response)
+    print(response_hexcode)
+    print(final_response)
