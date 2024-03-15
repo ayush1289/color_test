@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import os
 load_dotenv("setup/.env")
 api_key = os.getenv("OPENAI_API_KEY")
-
+  
 def get_hexcodes(filepath:str):
     try:
         faceFeature = FaceFeatures(filepath)
@@ -25,8 +25,9 @@ def get_hexcodes(filepath:str):
     
     except Exception as e:
         return {"error": "Face feature extraction failed."}
-    
-
+col1,col2,col3 = st.columns([1,1,1]) 
+with col2:   
+    st.image("logoNew.png",width=200)
 st.title("Personal Color Assistant")
 st.subheader("A virtual assistant to help you find the perfect colors to match your skin tone.")
 if 'messages' not in st.session_state:
