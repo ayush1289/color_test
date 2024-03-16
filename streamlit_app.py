@@ -1,13 +1,15 @@
 import streamlit as st
-import re
 import uuid
 from chat_llm.chat_handler import hexcode_from_text, hexcode_remover_from_text, ChatHandler
 from faceRecModule.faceFeature import FaceFeatures
 from dotenv import load_dotenv
 import os
-load_dotenv("setup/.env")
+load_dotenv(".env")
 api_key = os.getenv("OPENAI_API_KEY")
+
+st.set_page_config(page_title="PhotoGPT", page_icon="thumbnail.png", layout="centered", initial_sidebar_state="auto", menu_items=None)
   
+
 def get_hexcodes(filepath:str):
     try:
         faceFeature = FaceFeatures(filepath)

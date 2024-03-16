@@ -1,2 +1,2 @@
 #!/bin/bash
-RUN streamlit run streamlit_app.py
+streamlit run --server.port 7000 streamlit_app.py
