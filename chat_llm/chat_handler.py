@@ -1,6 +1,5 @@
 import re
 from openai import OpenAI
-from faceRecModule.faceFeature import FaceFeatures
 
 
 class ChatHandler:
@@ -20,13 +19,14 @@ class ChatHandler:
         self.jaw_colour = hexcodes[3]
         self.lips_colour = hexcodes[4]
 
-    def get_good_palette(self):
+    def get_good_palette(self,**kwargs):
         """
         Provides a good color palette based on user's facial features.
 
         Returns:
             dict: A dictionary containing hexcodes and corresponding color names for the palette.
         """
+        q = kwargs.get("queue")
         response = self.client.chat.completions.create(
             model="gpt-3.5-turbo",
             response_format={"type": "text"},
@@ -51,15 +51,17 @@ class ChatHandler:
                 },
             ],
         )
+        q.put([response.choices[0].message.content,1])
         return response.choices[0].message.content
 
-    def get_bad_palette(self):
+    def get_bad_palette(self, **kwargs):
         """
         Provides a bad color palette that would not suit the user based on their facial features.
 
         Returns:
             dict: A dictionary containing hexcodes and corresponding color names for the palette.
         """
+        q = kwargs.get("queue")
         response = self.client.chat.completions.create(
             model="gpt-3.5-turbo",
             response_format={"type": "text"},
@@ -84,15 +86,17 @@ class ChatHandler:
                 },
             ],
         )
+        q.put([response.choices[0].message.content,2])
         return response.choices[0].message.content
 
-    def get_blush(self):
+    def get_blush(self, **kwargs):
         """
         Provides detailed information about the suitable blush colors based on the color of user's lips.
 
         Returns:
             str: A string containing detailed information about the suitable blush colors.
         """
+        q = kwargs.get("queue")
         response = self.client.chat.completions.create(
             model="gpt-3.5-turbo",
             response_format={"type": "text"},
@@ -117,6 +121,7 @@ class ChatHandler:
                 },
             ],
         )
+        q.put([response.choices[0].message.content,3])
         return response.choices[0].message.content
 
 
@@ -154,15 +159,30 @@ if __name__ == "__main__":
 
     from dotenv import load_dotenv
     import os
-
+    import time
     load_dotenv("../setup/.env")
     chat_handler = ChatHandler(
         api_key=os.getenv("OPENAI_API_KEY"),
         hexcodes=("#dfb8aa", "#c39e8e", "#d09d82", "#e4c1ad", "#c34a5b"),
     )
-    response = chat_handler.get_good_palette()
-    print(response)
-    response_hexcode = hexcode_from_text(response)
-    final_response = hexcode_remover_from_text(response)
-    print(response_hexcode)
-    print(final_response)
+    import multiprocessing as mp
+    q = mp.Queue()
+    p1 = mp.Process(target=chat_handler.get_good_palette,kwargs={"queue":q})
+    p2 = mp.Process(target=chat_handler.get_bad_palette,kwargs={"queue":q})
+    p3 = mp.Process(target=chat_handler.get_blush,kwargs={"queue":q})
+    initial_time = time.time()
+    p1.start()  
+    p2.start()
+    p3.start()
+
+    p1.join()
+    p2.join()
+    p3.join()
+
+    final_time = time.time()
+    print("Done")
+    print(q.get())
+    print(q.get())
+    print(q.get())
+    print(final_time-initial_time)
+

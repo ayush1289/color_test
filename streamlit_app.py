@@ -4,6 +4,8 @@ from chat_llm.chat_handler import hexcode_from_text, hexcode_remover_from_text, 
 from faceRecModule.faceFeature import FaceFeatures
 from dotenv import load_dotenv
 import os
+import multiprocessing as mp
+import time
 load_dotenv(".env")
 api_key = os.getenv("OPENAI_API_KEY")
 
@@ -77,7 +79,7 @@ with col2:
 
 st.title("Personal Color Assistant")
 st.subheader("A virtual assistant to help you find the perfect colors to match your skin tone.")
-with st.expander("Instructions"):
+with st.expander("Instructions",expanded=True):
     st.write(
         """
         1. Upload an image of your face.
@@ -106,7 +108,7 @@ if st.session_state.file_container:
     with st.subheader("Upload an image"):
         with st.form(key="my_form"):
             uploaded_file = st.file_uploader("Choose an image...",type=["jpg","jpeg","png"])
-            submit_button = st.form_submit_button(label="Submit")
+            submit_button = st.form_submit_button(label=":blue[Submit]")
 
         if submit_button:
             if uploaded_file is None:
@@ -116,25 +118,33 @@ if st.session_state.file_container:
                     f.write(uploaded_file.read())
                     with st.spinner("Processing..."):
                         st.session_state.features = get_hexcodes("uploads/image.jpg")
+                        st.warning("Face feature extraction failed. Please try again.")
+                        st.session_state.file_container = True
                         print(st.session_state.features)
                         st.session_state.response_code = 200
                         st.session_state.file_container = False
                     st.success("Image uploaded successfully.")
-        
 
 
+    
 if st.session_state.response_code == 200 and not st.session_state.file_container:
-
-    llm_reply = ChatHandler(
-        api_key=api_key,
-        hexcodes=(
-            st.session_state.features["left_eye_colour"],
-            st.session_state.features["right_eye_colour"],
-            st.session_state.features["nose_colour"],
-            st.session_state.features["jaw_colour"],
-            st.session_state.features["lips_colour"],
-        ),
-    )
+    st.button(":blue[Upload another image]", on_click=lambda: st.session_state.update(file_container=True),key=f"{uuid.uuid4()}") 
+    llm_reply = None
+    try:
+        llm_reply = ChatHandler(
+            api_key=api_key,
+            hexcodes=(
+                st.session_state.features["left_eye_colour"],
+                st.session_state.features["right_eye_colour"],
+                st.session_state.features["nose_colour"],
+                st.session_state.features["jaw_colour"],
+                st.session_state.features["lips_colour"],
+            ),
+        )
+    except:
+        st.error("Something went wrong. Please try again.")
+        st.session_state.file_container = True
+        st.stop()
 
     col1, col2 = st.columns([2,1])
     with col1:
@@ -168,8 +178,21 @@ if st.session_state.response_code == 200 and not st.session_state.file_container
                             st.write(f"{i+1}."+response)
                     with col2:
                         st.color_picker( color_hexcode[i][1],f"#{color_hexcode[i][0]}",key=f"{uuid.uuid4()}")
+    with st.spinner("Please wait while the AI generates the best color palettes for you..."):
+        q = mp.Queue()
+        p1 = mp.Process(target=llm_reply.get_good_palette,kwargs={"queue":q})
+        p2 = mp.Process(target=llm_reply.get_bad_palette,kwargs={"queue":q})
+        p3 = mp.Process(target=llm_reply.get_blush,kwargs={"queue":q})
 
+        p1.start()
+        p2.start()
+        p3.start()
 
+        p1.join()
+        p2.join()
+        p3.join()
+    response_llm = [q.get() for _ in range(3)]
+    response_llm.sort(key = lambda x: x[1])
     for i in range(len(st.session_state.prompt)):
 
         prompt = st.session_state.prompt[i]
@@ -178,25 +201,16 @@ if st.session_state.response_code == 200 and not st.session_state.file_container
             with st.chat_message("user"):
                 st.write(prompt)
             with st.spinner("lets see what the AI has to say..."):
-
-                response = ""
                 if prompt == st.session_state.prompt[0]:
-                    if not st.session_state.good_palette:
-                        st.session_state.good_palette = llm_reply.get_good_palette()
-                    response = st.session_state.good_palette
+                    response = response_llm[0][0] 
                 elif prompt == st.session_state.prompt[1]:
-                    if not st.session_state.bad_palette:
-                        st.session_state.bad_palette = llm_reply.get_bad_palette()
-                    response = st.session_state.bad_palette
+                    response = response_llm[1][0]
                 elif prompt == st.session_state.prompt[2]:
-                    if not st.session_state.blush_palette:
-                        st.session_state.blush_palette = llm_reply.get_blush()
-                    response = st.session_state.blush_palette
+                    response = response_llm[2][0]
             
                 st.session_state.messages.append({"role":"assistant","content":response})
                 color_hexcode = hexcode_from_text(response)
-                response = hexcode_remover_from_text(response)
-                response = response[4:]
+                response = hexcode_remover_from_text(response)[4:]
                 with st.chat_message("assistant"):
                     for i in range(5):
                         col1, col2 = st.columns([4,1])
@@ -208,10 +222,12 @@ if st.session_state.response_code == 200 and not st.session_state.file_container
                             else:
                                 st.write(f"{i+1}."+response)
                         with col2:
-                            st.color_picker( color_hexcode[i][1],f"#{color_hexcode[i][0]}",key=f"{uuid.uuid4()}")
-    st.button("Clear Chat", on_click=lambda: st.session_state.messages.clear())
+                                st.color_picker( color_hexcode[i][1],f"#{color_hexcode[i][0]}",key=f"{uuid.uuid4()}")
+
+        
 else:
     st.warning("Please upload an image to get started.")
+
 
 
 
