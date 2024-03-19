@@ -228,6 +228,20 @@ if st.session_state.response_code == 200 and not st.session_state.file_container
 else:
     st.warning("Please upload an image to get started.")
 
+col1,col2 = st.columns([1,4])
+with col1:
+    st.link_button("Photogpt AI","https://www.photogptai.com/")
+with col2:
+    st.write("Press this button to unveil your style essence: see yourself in clothes matching this color palette on :blue[PhotoGPT]!",font_size="small")
+st.markdown(
+    """
+    <div class="block-container">
+        <p style="text-align:center;">Made with ❤️ by <a href="https://www.photogptai.com/"><img src="https://www.photogptai.com/Assets/logoNew.png" alt="Logo" width=100></a></p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+    
 
 
 
